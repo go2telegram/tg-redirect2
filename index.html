@@ -5,20 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Открываем Telegram…</title>
   <meta name="robots" content="noindex,nofollow" />
-  <meta name="referrer" content="no-referrer" />
-
-  <!-- Open Graph -->
-  <meta property="og:title" content="Открываем Telegram" />
-  <meta property="og:description" content="Нажмите кнопку ниже, чтобы перейти в Telegram. Если приложение не установлено — мы подскажем, как его скачать." />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://USERNAME.github.io/tg-redirect/" />
-  <meta property="og:image" content="https://avatars.githubusercontent.com/u/9919?s=200&v=4" />
 
   <style>
     :root { --bg:#0f1115; --card:#161a22; --text:#e8ecf1; --muted:#a9b1bd; }
     * { box-sizing: border-box }
     html,body { height:100% }
-    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji","Segoe UI Emoji"; background:var(--bg); color:var(--text); display:grid; place-items:center }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial; background:var(--bg); color:var(--text); display:grid; place-items:center }
     .card { width:min(820px, 92vw); background:var(--card); padding:28px; border-radius:20px; box-shadow: 0 10px 30px rgba(0,0,0,.35) }
     h1 { font-size: clamp(22px, 3.2vw, 28px); margin: 0 0 8px }
     p { color: var(--muted); line-height:1.5; margin: 8px 0 }
@@ -27,6 +19,11 @@
     .btn.primary { background:#2385ff; color:white }
     .btn:focus { outline:2px solid #3c8dff66; outline-offset:2px }
     .note { margin-top:14px; font-size:13px; color:#93a0af }
+    .modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; padding:24px }
+    .modal .box { background:#1a1f2a; border-radius:16px; padding:20px; max-width:520px }
+    .modal h2 { margin:0 0 10px; font-size:20px }
+    .steps { font-size:14px; color:#c2c9d4; line-height:1.6 }
+    .close { margin-top:14px; }
   </style>
 
   <!-- Yandex.Metrika counter (ID: 104141664) -->
@@ -41,8 +38,7 @@
     ym(104141664, 'init', {ssr:true, clickmap:true, ecommerce:"dataLayer", accurateTrackBounce:true, trackLinks:true});
     ym(104141664, 'reachGoal', 'visit');
 </script>
-<noscript><div><img src="https://mc.yandex.ru/watch/104141664" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
-<!-- /Yandex.Metrika counter -->
+<noscript><div><img src="https://mc.yandex.ru/watch/104141664" style="position:absolute; left:-9999px;" alt=""/></div></noscript>
 </head>
 <body>
   <div class="card">
@@ -50,46 +46,39 @@
     <p>Нажмите кнопку ниже, чтобы перейти в Telegram. Если приложение не установлено — мы подскажем, как его скачать.</p>
 
     <div class="actions">
-      <a id="openAppBtn" class="btn primary" href="#" rel="noopener">Открыть в Telegram</a>
-      <a id="openWebBtn" class="btn" href="#" rel="nofollow noopener">Открыть в браузере</a>
-      <a id="storeBtn" class="btn" href="#" rel="nofollow noopener">Установить Telegram</a>
-      <a id="copyBtn" class="btn" href="#" rel="nofollow noopener">Скопировать ссылку</a>
+      <a id="openAppBtn" class="btn primary" href="#">Открыть в Telegram</a>
+      <a id="openWebBtn" class="btn" href="#" rel="nofollow">Открыть в браузере</a>
+      <a id="storeBtn" class="btn" href="#" rel="nofollow">Установить Telegram</a>
+      <a id="copyBtn" class="btn" href="#" rel="nofollow">Скопировать ссылку</a>
     </div>
 
-    <p class="note" id="hint" style="display:none;">
-      Похоже, вы открыли ссылку внутри приложения (Instagram/TikTok). Нажмите <b>⋯</b> и выберите <b>Открыть в Safari/браузере</b>. Либо скопируйте ссылку и вставьте вручную.
-    </p>
+    <p class="note" id="hint" style="display:none;">Похоже, вы открыли ссылку внутри приложения. Выберите <b>Открыть в браузере</b> в меню <b>⋯</b> или скопируйте ссылку.</p>
+  </div>
+
+  <div id="modal" class="modal" role="dialog" aria-modal="true">
+    <div class="box">
+      <h2>Откройте в Safari</h2>
+      <div class="steps">
+        1) Нажмите <b>⋯</b> в правом верхнем углу<br/>
+        2) Выберите <b>Открыть в Safari</b><br/>
+        3) Нажмите <b>Открыть в Telegram</b> на новой странице
+      </div>
+      <div class="actions">
+        <a id="closeModal" class="btn close" href="#">Понятно</a>
+      </div>
+    </div>
   </div>
 
   <script>
-    // =====================
-    // ⚙️ НАСТРОЙКИ
-    // =====================
-    const inviteCode = "+oQf2XIfajeg5MDVi"; // приватная инвайт-ссылка
-    const publicUsername = null;             // @username, если появится
+    const inviteCode = "+oQf2XIfajeg5MDVi";
+    const publicUsername = null;
 
-    // =====================
-    // Детект окружения
-    // =====================
     const UA = (navigator.userAgent || '') + ' ' + (navigator.vendor || '');
-    const REF = (document.referrer || '').toLowerCase();
-    const isIOS  = /iPhone|iPad|iPod/i.test(UA) || ((/Mac|Macintosh/i.test(UA)) && (navigator.maxTouchPoints||0) > 1);
     const isAndroid = /android/i.test(UA);
-    const isInApp = /(Instagram|FBAN|FBAV|Line|OKApp|VK(Client|Share)|YaApp_Android|YaApp_iOS|Twitter|WeChat|Pinterest|Snapchat|LinkedIn|TTWebView|BytedanceWebview|Aweme|musical\.ly|TikTok)/i.test(UA) || REF.includes('tiktok.com') || REF.includes('instagram.com');
+    const isIOS = /iPhone|iPad|iPod/i.test(UA) || ((/Mac|Macintosh/i.test(UA)) && (navigator.maxTouchPoints||0) > 1);
+    const isTikTok = /(TikTok|TTWebView|BytedanceWebview|Aweme|musical\.ly)/i.test(UA);
+    const isInApp  = isTikTok || /(Instagram|FBAN|FBAV|VK(Client|Share)|OKApp|YaApp_Android|YaApp_iOS)/i.test(UA);
 
-    // Автозапуск: по умолчанию ОТКЛ для всех, включается только параметром ?auto=1
-    const qp = new URLSearchParams(location.search);
-    const preferDeepLink = qp.get('auto') === '1';
-
-    // показываем подсказку в in-app
-    if (isInApp) {
-      const hint = document.getElementById('hint');
-      if (hint) hint.style.display = 'block';
-    }
-
-    // =====================
-    // Ссылки
-    // =====================
     const tmeBase = publicUsername ? `https://t.me/${publicUsername}` : `https://t.me/${inviteCode}`;
     const tgDeep  = publicUsername ? `tg://resolve?domain=${publicUsername}` : `tg://join?invite=${inviteCode.replace('+','')}`;
     const webTg   = publicUsername ? `https://web.telegram.org/k/#@${publicUsername}` : tmeBase;
@@ -98,15 +87,10 @@
     const storeDesktop = `https://telegram.org/apps`;
 
     function withUTM(url){
-      const utms = new URLSearchParams();
       const qs = new URLSearchParams(location.search);
-      ["utm_source","utm_medium","utm_campaign","utm_content","utm_term","s","src","ref","gclid","fbclid","ttclid","yclid"].forEach(k=>{
-        const v = qs.get(k);
-        if (v) utms.set(k, v);
-      });
-      if(!utms.toString()) return url;
+      const keep = ["utm_source","utm_medium","utm_campaign","utm_content","utm_term","s","src","ref","gclid","fbclid","ttclid","yclid"];
       const u = new URL(url);
-      utms.forEach((v,k)=>u.searchParams.set(k,v));
+      keep.forEach(k=>{ const v = qs.get(k); if(v) u.searchParams.set(k,v); });
       return u.toString();
     }
 
@@ -114,8 +98,54 @@
     const elWeb   = document.getElementById('openWebBtn');
     const elStore = document.getElementById('storeBtn');
     const elCopy  = document.getElementById('copyBtn');
+    const modal   = document.getElementById('modal');
+    const closeModal = document.getElementById('closeModal');
 
-    elWeb.href = withUTM(webTg);
+    // Открыть в браузере — ведём на web.telegram.org (для десктопа) или t.me (мобайл)
+    elWeb.addEventListener('click', (e)=>{
+      e.preventDefault();
+      const target = isIOS || isAndroid ? tmeBase : webTg;
+      if (isTikTok && isIOS) {
+        // В TikTok iOS запрещен нормальный переход: показываем подсказку
+        modal.style.display = 'flex';
+      } else {
+        location.href = withUTM(target);
+      }
+      try { ym(104141664, 'reachGoal', 'open_web'); } catch(_) {}
+    });
+
+    // Открыть в Telegram — разные стратегии
+    elOpen.addEventListener('click', (e)=>{
+      e.preventDefault();
+      if (isTikTok && isIOS) {
+        // Невозможно открыть приложение прямо из webview — показываем инструкцию
+        modal.style.display = 'flex';
+        return;
+      }
+      if (isTikTok && isAndroid) {
+        // Пытаемся вырваться из webview через intent:// на Android
+        const intent = publicUsername
+          ? `intent://resolve?domain=${publicUsername}#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=${encodeURIComponent(withUTM(tmeBase))};end`
+          : `intent://join?invite=${inviteCode.replace('+','')}#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=${encodeURIComponent(withUTM(tmeBase))};end`;
+        location.href = intent;
+        return;
+      }
+      // Обычное поведение
+      if (isIOS) {
+        location.href = withUTM(tmeBase);
+        setTimeout(()=>{ location.href = withUTM(storeIOS); }, 1800);
+      } else if (isAndroid) {
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = tgDeep;
+        document.body.appendChild(iframe);
+        setTimeout(()=>{ location.href = withUTM(tmeBase); }, 800);
+        setTimeout(()=>{ location.href = withUTM(storeAndroid); }, 1800);
+      } else {
+        location.href = withUTM(tmeBase);
+      }
+      try { ym(104141664, 'reachGoal', 'open_app'); } catch(_) {}
+    });
 
     elStore.addEventListener('click', (e)=>{
       e.preventDefault();
@@ -128,43 +158,10 @@
 
     elCopy.addEventListener('click', async (e)=>{
       e.preventDefault();
-      const universalUrl = withUTM(tmeBase);
-      try { await navigator.clipboard.writeText(universalUrl); elCopy.textContent = 'Ссылка скопирована'; ym(104141664, 'reachGoal', 'copy_link'); } catch(_) { alert('Скопируйте ссылку:\\n' + universalUrl); }
+      try { await navigator.clipboard.writeText(withUTM(tmeBase)); elCopy.textContent = 'Ссылка скопирована'; ym(104141664, 'reachGoal', 'copy_link'); } catch(_){ alert('Скопируйте ссылку:\\n' + withUTM(tmeBase)); }
     });
 
-    function tryOpenApp(){
-      const universalUrl = withUTM(tmeBase);
-      let didHide = false;
-      const onHide = () => { didHide = true; cleanup(); };
-      const cleanup = () => {
-        document.removeEventListener('visibilitychange', onHide);
-        window.removeEventListener('pagehide', onHide);
-        window.removeEventListener('blur', onHide);
-      };
-      document.addEventListener('visibilitychange', onHide);
-      window.addEventListener('pagehide', onHide);
-      window.addEventListener('blur', onHide);
-
-      if(isIOS){
-        setTimeout(()=>{ location.href = universalUrl; }, 700);
-        setTimeout(() => { if(!didHide) location.href = withUTM(storeIOS); }, 2200);
-      } else if(isAndroid){
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        iframe.src = tgDeep;
-        document.body.appendChild(iframe);
-
-        setTimeout(() => { if(!didHide) location.href = universalUrl; }, 900);
-        setTimeout(() => { if(!didHide) location.href = withUTM(storeAndroid); }, 2200);
-      } else {
-        location.href = universalUrl;
-      }
-    }
-
-    elOpen.addEventListener('click', (e)=>{ e.preventDefault(); tryOpenApp(); });
-    if (preferDeepLink) setTimeout(tryOpenApp, 350);
-
-    [elOpen, elWeb, elStore, elCopy].forEach(a=>a.setAttribute('target','_top'));
+    closeModal.addEventListener('click', (e)=>{ e.preventDefault(); modal.style.display='none'; });
   </script>
 </body>
 </html>
