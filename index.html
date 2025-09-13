@@ -19,11 +19,6 @@
     .btn.primary { background:#2385ff; color:white }
     .btn:focus { outline:2px solid #3c8dff66; outline-offset:2px }
     .note { margin-top:14px; font-size:13px; color:#93a0af }
-    .modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; padding:24px }
-    .modal .box { background:#1a1f2a; border-radius:16px; padding:20px; max-width:520px }
-    .modal h2 { margin:0 0 10px; font-size:20px }
-    .steps { font-size:14px; color:#c2c9d4; line-height:1.6 }
-    .close { margin-top:14px; }
   </style>
 
   <!-- Yandex.Metrika counter (ID: 104141664) -->
@@ -55,20 +50,6 @@
     <p class="note" id="hint" style="display:none;">Похоже, вы открыли ссылку внутри приложения. Выберите <b>Открыть в браузере</b> в меню <b>⋯</b> или скопируйте ссылку.</p>
   </div>
 
-  <div id="modal" class="modal" role="dialog" aria-modal="true">
-    <div class="box">
-      <h2>Откройте в Safari</h2>
-      <div class="steps">
-        1) Нажмите <b>⋯</b> в правом верхнем углу<br/>
-        2) Выберите <b>Открыть в Safari</b><br/>
-        3) Нажмите <b>Открыть в Telegram</b> на новой странице
-      </div>
-      <div class="actions">
-        <a id="closeModal" class="btn close" href="#">Понятно</a>
-      </div>
-    </div>
-  </div>
-
   <script>
     const inviteCode = "+oQf2XIfajeg5MDVi";
     const publicUsername = null;
@@ -76,8 +57,12 @@
     const UA = (navigator.userAgent || '') + ' ' + (navigator.vendor || '');
     const isAndroid = /android/i.test(UA);
     const isIOS = /iPhone|iPad|iPod/i.test(UA) || ((/Mac|Macintosh/i.test(UA)) && (navigator.maxTouchPoints||0) > 1);
-    const isTikTok = /(TikTok|TTWebView|BytedanceWebview|Aweme|musical\.ly)/i.test(UA);
-    const isInApp  = isTikTok || /(Instagram|FBAN|FBAV|VK(Client|Share)|OKApp|YaApp_Android|YaApp_iOS)/i.test(UA);
+    const isInApp  = /(Instagram|FBAN|FBAV|TikTok|TTWebView|BytedanceWebview|Aweme|musical\.ly|VK(Client|Share)|OKApp|YaApp_Android|YaApp_iOS)/i.test(UA);
+
+    if (isInApp) {
+      const hint = document.getElementById('hint');
+      if (hint) hint.style.display = 'block';
+    }
 
     const tmeBase = publicUsername ? `https://t.me/${publicUsername}` : `https://t.me/${inviteCode}`;
     const tgDeep  = publicUsername ? `tg://resolve?domain=${publicUsername}` : `tg://join?invite=${inviteCode.replace('+','')}`;
@@ -94,58 +79,28 @@
       return u.toString();
     }
 
+    // --- NEW: inject UTM into page URL for Yandex Metrika standard reports ---
+    try {
+      const qs = new URLSearchParams(location.search);
+      const url = new URL(location.href);
+      let changed = false;
+      ["utm_source","utm_medium","utm_campaign","utm_content"].forEach(k=>{
+        if(qs.get(k)) {
+          if (url.searchParams.get(k) !== qs.get(k)) {
+            url.searchParams.set(k, qs.get(k));
+            changed = true;
+          }
+        }
+      });
+      if (changed) history.replaceState(null, "", url.toString());
+    } catch(_) {}
+
     const elOpen  = document.getElementById('openAppBtn');
     const elWeb   = document.getElementById('openWebBtn');
     const elStore = document.getElementById('storeBtn');
     const elCopy  = document.getElementById('copyBtn');
-    const modal   = document.getElementById('modal');
-    const closeModal = document.getElementById('closeModal');
 
-    // Открыть в браузере — ведём на web.telegram.org (для десктопа) или t.me (мобайл)
-    elWeb.addEventListener('click', (e)=>{
-      e.preventDefault();
-      const target = isIOS || isAndroid ? tmeBase : webTg;
-      if (isTikTok && isIOS) {
-        // В TikTok iOS запрещен нормальный переход: показываем подсказку
-        modal.style.display = 'flex';
-      } else {
-        location.href = withUTM(target);
-      }
-      try { ym(104141664, 'reachGoal', 'open_web'); } catch(_) {}
-    });
-
-    // Открыть в Telegram — разные стратегии
-    elOpen.addEventListener('click', (e)=>{
-      e.preventDefault();
-      if (isTikTok && isIOS) {
-        // Невозможно открыть приложение прямо из webview — показываем инструкцию
-        modal.style.display = 'flex';
-        return;
-      }
-      if (isTikTok && isAndroid) {
-        // Пытаемся вырваться из webview через intent:// на Android
-        const intent = publicUsername
-          ? `intent://resolve?domain=${publicUsername}#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=${encodeURIComponent(withUTM(tmeBase))};end`
-          : `intent://join?invite=${inviteCode.replace('+','')}#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=${encodeURIComponent(withUTM(tmeBase))};end`;
-        location.href = intent;
-        return;
-      }
-      // Обычное поведение
-      if (isIOS) {
-        location.href = withUTM(tmeBase);
-        setTimeout(()=>{ location.href = withUTM(storeIOS); }, 1800);
-      } else if (isAndroid) {
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        iframe.src = tgDeep;
-        document.body.appendChild(iframe);
-        setTimeout(()=>{ location.href = withUTM(tmeBase); }, 800);
-        setTimeout(()=>{ location.href = withUTM(storeAndroid); }, 1800);
-      } else {
-        location.href = withUTM(tmeBase);
-      }
-      try { ym(104141664, 'reachGoal', 'open_app'); } catch(_) {}
-    });
+    elWeb.href = withUTM(webTg);
 
     elStore.addEventListener('click', (e)=>{
       e.preventDefault();
@@ -158,10 +113,29 @@
 
     elCopy.addEventListener('click', async (e)=>{
       e.preventDefault();
-      try { await navigator.clipboard.writeText(withUTM(tmeBase)); elCopy.textContent = 'Ссылка скопирована'; ym(104141664, 'reachGoal', 'copy_link'); } catch(_){ alert('Скопируйте ссылку:\\n' + withUTM(tmeBase)); }
+      try { await navigator.clipboard.writeText(withUTM(tmeBase)); elCopy.textContent = 'Ссылка скопирована'; ym(104141664, 'reachGoal', 'copy_link'); } catch(_){ alert('Скопируйте ссылку:\n' + withUTM(tmeBase)); }
     });
 
-    closeModal.addEventListener('click', (e)=>{ e.preventDefault(); modal.style.display='none'; });
+    function tryOpenApp(){
+      if(isIOS){
+        location.href = withUTM(tmeBase);
+        setTimeout(()=>{ location.href = withUTM(storeIOS); }, 1800);
+      } else if(isAndroid){
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = tgDeep;
+        document.body.appendChild(iframe);
+        setTimeout(()=>{ location.href = withUTM(tmeBase); }, 800);
+        setTimeout(()=>{ location.href = withUTM(storeAndroid); }, 1800);
+      } else {
+        location.href = withUTM(tmeBase);
+      }
+      try { ym(104141664, 'reachGoal', 'open_app'); } catch(_) {}
+    }
+
+    elOpen.addEventListener('click', (e)=>{ e.preventDefault(); tryOpenApp(); });
+
+    [elOpen, elWeb, elStore, elCopy].forEach(a=>a.setAttribute('target','_top'));
   </script>
 </body>
 </html>
