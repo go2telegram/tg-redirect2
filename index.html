@@ -8,7 +8,7 @@
 
   <!-- Open Graph -->
   <meta property="og:title" content="Открываем Telegram" />
-  <meta property="og:description" content="Быстрый переход в приложение Telegram или установку — работает на iOS, Android и Desktop." />
+  <meta property="og:description" content="Нажмите кнопку ниже, чтобы перейти в Telegram. Если приложение не установлено — мы подскажем, как его скачать." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://USERNAME.github.io/tg-redirect/" />
   <meta property="og:image" content="https://avatars.githubusercontent.com/u/9919?s=200&v=4" />
@@ -25,10 +25,8 @@
     .btn { appearance:none; border:none; padding:14px 16px; border-radius:14px; background:#2a3141; color:var(--text); cursor:pointer; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:10px }
     .btn.primary { background:#2385ff; color:white }
     .btn:focus { outline:2px solid #3c8dff66; outline-offset:2px }
-    code { background:#0f131a; padding:2px 6px; border-radius:6px }
     .small { font-size: 13px; color: var(--muted); margin-top: 12px }
     .note { margin-top:14px; font-size:13px; color:#93a0af }
-    .kbd { padding:0 6px; border:1px solid #263042; border-radius:6px; background:#0f131a; color:#e8ecf1 }
   </style>
 
   <!-- Yandex.Metrika counter (ID: 104141664) -->
@@ -41,6 +39,7 @@
     })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=104141664', 'ym');
 
     ym(104141664, 'init', {ssr:true, clickmap:true, ecommerce:"dataLayer", accurateTrackBounce:true, trackLinks:true});
+    ym(104141664, 'reachGoal', 'visit');
 </script>
 <noscript><div><img src="https://mc.yandex.ru/watch/104141664" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 <!-- /Yandex.Metrika counter -->
@@ -48,7 +47,7 @@
 <body>
   <div class="card">
     <h1>Открываем Telegram…</h1>
-    <p>Страница сама выберет лучший способ: открыть приложение или отправить на установку. UTM и клики учитываются в Метрике.</p>
+    <p>Нажмите кнопку ниже, чтобы перейти в Telegram. Если приложение не установлено — мы подскажем, как его скачать.</p>
 
     <div class="actions">
       <a id="openAppBtn" class="btn primary" href="#">Открыть в Telegram</a>
@@ -57,12 +56,6 @@
       <a id="copyBtn" class="btn" href="#" rel="nofollow">Скопировать ссылку</a>
     </div>
 
-    <p class="small">
-      Источник: <code id="src">direct</code> ·
-      Алиасы путей: <code>/yt</code>, <code>/ig</code>, <code>/tt</code>, <code>/ads</code> ·
-      Каналы: <code>/c1</code>, <code>/c2</code>, <code>/c3</code> ·
-      Контент: <code>/v</code> (video), <code>/s</code> (shorts), <code>/live</code>, <code>/story</code>, <code>/bio</code>.
-    </p>
     <p class="note" id="hint" style="display:none;">
       Похоже, вы открыли ссылку внутри приложения. Нажмите <b>⋯</b> или кнопку меню и выберите <b>Открыть в Safari/браузере</b>. Либо скопируйте ссылку и вставьте в адресную строку.
     </p>
@@ -139,19 +132,26 @@
     // Отправим UTM в Метрику как параметры визита
     try { ym(104141664, 'params', { utm: Object.fromEntries(utms.entries()) }); } catch (_) {}
 
-    // Источник для подписи
-    const srcText = utms.get("utm_source") || qs.get("src") || (document.referrer ? new URL(document.referrer).hostname : "direct");
-    document.getElementById('src').textContent = srcText;
-
     // =====================
     // 🔗 ССЫЛКИ И РЕДИРЕКТЫ
     // =====================
-    const ua = navigator.userAgent || navigator.vendor || window.opera;
-    const isAndroid = /android/i.test(ua);
-    const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    const isInApp = /(FBAN|FBAV|Instagram|Line|TikTok|VKClient|VKShare|YaApp_Android|YaApp_iOS|OKApp)/i.test(ua);
-    if (isInApp) preferDeepLink = false; // не автозапускаем deep link внутри приложений
-    if (isInApp) {
+    function isIOSDevice(){
+      const ua = navigator.userAgent || '';
+      const plat = navigator.platform || '';
+      // iPhone/iPad/iPod or iPadOS masquerading as Mac
+      return /iPhone|iPad|iPod/i.test(ua) ||
+             /iP(hone|ad|od)/i.test(plat) ||
+             (/Mac/i.test(plat || ua) && (navigator.maxTouchPoints || 0) > 1) ||
+             (/Macintosh/i.test(ua) && 'ontouchend' in document);
+    }
+    function isAndroidDevice(){ return /android/i.test(navigator.userAgent || ''); }
+    function isInApp(){
+      const ua = navigator.userAgent || '';
+      return /(FBAN|FBAV|Instagram|Line|TikTok|VKClient|VKShare|YaApp_Android|YaApp_iOS|OKApp)/i.test(ua);
+    }
+
+    if (isInApp()) preferDeepLink = false; // не автозапускаем deep link внутри приложений
+    if (isInApp()) {
       const hint = document.getElementById('hint');
       if (hint) hint.style.display = 'block';
     }
@@ -162,6 +162,7 @@
 
     const storeIOS = `https://apps.apple.com/app/telegram-messenger/id686449807`;
     const storeAndroid = `https://play.google.com/store/apps/details?id=org.telegram.messenger`;
+    const storeDesktop = `https://telegram.org/apps`;
 
     function withUTM(url){
       if(!utms.toString()) return url;
@@ -175,8 +176,17 @@
     const elStore = document.getElementById('storeBtn');
     const elCopy  = document.getElementById('copyBtn');
 
-    elWeb.href   = withUTM(webTg);
-    elStore.href = withUTM(isIOS ? storeIOS : storeAndroid);
+    elWeb.href = withUTM(webTg);
+
+    // Store: решаем целевой магазин при клике (надёжнее, чем заранее)
+    elStore.addEventListener('click', (e)=>{
+      e.preventDefault();
+      let target = storeDesktop;
+      if (isIOSDevice()) target = storeIOS;
+      else if (isAndroidDevice()) target = storeAndroid;
+      location.href = withUTM(target);
+      try { ym(104141664, 'reachGoal', 'open_store'); } catch(_) {}
+    });
 
     async function copyLink(e){
       e.preventDefault();
@@ -207,17 +217,17 @@
       window.addEventListener('pagehide', onHide);
       window.addEventListener('blur', onHide);
 
-      if(isIOS){
-        location.href = universalUrl;
-        setTimeout(() => { if(!didHide) location.href = withUTM(storeIOS); }, 1500);
-      } else if(isAndroid){
+      if(isIOSDevice()){
+        setTimeout(()=>{ location.href = universalUrl; }, 600);
+        setTimeout(() => { if(!didHide) location.href = withUTM(storeIOS); }, 2000);
+      } else if(isAndroidDevice()){
         const iframe = document.createElement('iframe');
         iframe.style.display = 'none';
         iframe.src = tgDeep;
         document.body.appendChild(iframe);
 
-        setTimeout(() => { if(!didHide) location.href = universalUrl; }, 800);
-        setTimeout(() => { if(!didHide) location.href = withUTM(storeAndroid); }, 1800);
+        setTimeout(() => { if(!didHide) location.href = universalUrl; }, 900);
+        setTimeout(() => { if(!didHide) location.href = withUTM(storeAndroid); }, 2000);
       } else {
         location.href = universalUrl;
       }
@@ -225,22 +235,9 @@
 
     elOpen.addEventListener('click', (e)=>{ e.preventDefault(); tryOpenApp(); });
 
-    if (preferDeepLink) setTimeout(tryOpenApp, 250);
+    if (preferDeepLink) setTimeout(tryOpenApp, 300);
 
     [elOpen, elWeb, elStore, elCopy].forEach(a=>a.setAttribute('target','_top'));
-
-    // Метрика: цели кликов
-    [elOpen, elWeb, elStore, elCopy].forEach(a=>{
-      a.addEventListener('click',()=>{
-        try {
-          if (a.id === 'openAppBtn') ym(104141664, 'reachGoal', 'open_app');
-          if (a.id === 'openWebBtn') ym(104141664, 'reachGoal', 'open_web');
-          if (a.id === 'storeBtn')   ym(104141664, 'reachGoal', 'open_store');
-          if (a.id === 'copyBtn')    ym(104141664, 'reachGoal', 'copy_link');
-          console.log('click:', a.id, { utm: Object.fromEntries(utms.entries()) });
-        } catch(_) {}
-      });
-    });
   </script>
 </body>
 </html>
