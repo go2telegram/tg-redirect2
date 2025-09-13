@@ -6,7 +6,7 @@
   <title>Открываем Telegram…</title>
   <meta name="robots" content="noindex,nofollow" />
 
-  <!-- Open Graph (для красивых превью) -->
+  <!-- Open Graph -->
   <meta property="og:title" content="Открываем Telegram" />
   <meta property="og:description" content="Быстрый переход в приложение Telegram или установку — работает на iOS, Android и Desktop." />
   <meta property="og:type" content="website" />
@@ -54,6 +54,7 @@
       <a id="openAppBtn" class="btn primary" href="#">Открыть в Telegram</a>
       <a id="openWebBtn" class="btn" href="#" rel="nofollow">Открыть в браузере</a>
       <a id="storeBtn" class="btn" href="#" rel="nofollow">Установить Telegram</a>
+      <a id="copyBtn" class="btn" href="#" rel="nofollow">Скопировать ссылку</a>
     </div>
 
     <p class="small">
@@ -62,9 +63,8 @@
       Каналы: <code>/c1</code>, <code>/c2</code>, <code>/c3</code> ·
       Контент: <code>/v</code> (video), <code>/s</code> (shorts), <code>/live</code>, <code>/story</code>, <code>/bio</code>.
     </p>
-    <p class="note">
-      Примеры ссылок: <span class="kbd">/yt/c1/v</span>, <span class="kbd">/yt/c2/s</span>, <span class="kbd">/ig/c1/story</span>, <span class="kbd">/tt/c3/bio</span>, <span class="kbd">/ads/meta/c1</span>.<br/>
-      UTM из query переопределяют алиасы, если заданы (ручной контроль сильнее пресета).
+    <p class="note" id="hint" style="display:none;">
+      Похоже, вы открыли ссылку внутри приложения. Нажмите <b>⋯</b> или кнопку меню и выберите <b>Открыть в Safari/браузере</b>. Либо скопируйте ссылку и вставьте в адресную строку.
     </p>
   </div>
 
@@ -72,20 +72,10 @@
     // =====================
     // ⚙️ НАСТРОЙКИ
     // =====================
-    // Приватная инвайт-ссылка (https://t.me/+XXXX)
-    const inviteCode = "+oQf2XIfajeg5MDVi";
-    // Публичный @username, если появится — используем его (tg://resolve)
-    const publicUsername = null; // например: "pyat_kluchey_zdorovya" или null
-
-    // Имена каналов для utm_campaign (задай человекочитаемые)
-    const channelNames = {
-      c1: "main",
-      c2: "second",
-      c3: "third"
-    };
-
-    // Автооткрытие deep link
-    const preferDeepLink = true;
+    const inviteCode = "+oQf2XIfajeg5MDVi"; // приватная инвайт-ссылка
+    const publicUsername = null;             // @username, если появится
+    const channelNames = { c1: "main", c2: "second", c3: "third" };
+    let preferDeepLink = true;               // автооткрытие приложения
 
     // =====================
     // 🚀 ЛОГИКА UTM/ПРЕСЕТОВ
@@ -95,25 +85,20 @@
     const UTM_KEYS = ["utm_source","utm_medium","utm_campaign","utm_content","utm_term","s","src","ref","gclid","fbclid","ttclid","yclid"];
     UTM_KEYS.forEach(k=>{ if(qs.get(k)) utms.set(k, qs.get(k)); });
 
-    // Алиасы по pathname: /<platform>/<channel>/<kind>
-    // platform: yt | ig | tt | ads
-    // channel:  c1 | c2 | c3 (три твоих канала/аккаунта)
-    // kind:     v | s | live | story | bio | reels | profile
+    // Алиасы: /<platform>/<channel>/<kind>
     const path = (location.pathname || '').replace(/\/+$/,'').toLowerCase();
-    const parts = path.split('/').filter(Boolean); // ['', 'yt', 'c1', 'v'] -> ['yt','c1','v']
+    const parts = path.split('/').filter(Boolean);
 
     function applyPreset(parts){
       if (!parts.length) return;
-
-      const platform = parts[0];             // yt/ig/tt/ads
-      const ch = parts[1];                   // c1/c2/c3 (опционально)
-      const kind = parts[2];                 // v/s/live/story/bio/... (опционально)
+      const platform = parts[0];            // yt/ig/tt/ads
+      const ch = parts[1];                  // c1/c2/c3 | network для ads
+      const kind = parts[2];                // v/s/live/story/bio/...
 
       const chName = channelNames[ch] || ch || 'na';
 
       if (platform === 'yt') {
         if (!utms.get('utm_source')) utms.set('utm_source','youtube');
-        // medium по типу
         if (!utms.get('utm_medium')) {
           if (kind === 's') utms.set('utm_medium','shorts');
           else if (kind === 'live') utms.set('utm_medium','live');
@@ -122,7 +107,6 @@
         if (!utms.get('utm_campaign')) utms.set('utm_campaign', `yt_${chName}`);
         if (!utms.get('utm_content') && kind) utms.set('utm_content', kind);
       }
-
       if (platform === 'ig') {
         if (!utms.get('utm_source')) utms.set('utm_source','instagram');
         if (!utms.get('utm_medium')) {
@@ -134,7 +118,6 @@
         if (!utms.get('utm_campaign')) utms.set('utm_campaign', `ig_${chName}`);
         if (!utms.get('utm_content') && kind) utms.set('utm_content', kind);
       }
-
       if (platform === 'tt') {
         if (!utms.get('utm_source')) utms.set('utm_source','tiktok');
         if (!utms.get('utm_medium')) {
@@ -144,14 +127,11 @@
         if (!utms.get('utm_campaign')) utms.set('utm_campaign', `tt_${chName}`);
         if (!utms.get('utm_content') && kind) utms.set('utm_content', kind);
       }
-
       if (platform === 'ads') {
-        // /ads/<network>/<channel?>
         const net = ch || 'meta';
         if (!utms.get('utm_source')) utms.set('utm_source', net); // meta/google/tiktok/yandex/vk
         if (!utms.get('utm_medium')) utms.set('utm_medium','ads');
-        if (!utms.get('utm_campaign')) utms.set('utm_campaign', `ads_${chName}`);
-        if (!utms.get('utm_content') && kind) utms.set('utm_content', kind);
+        if (!utms.get('utm_campaign')) utms.set('utm_campaign', `ads_${channelNames[kind]||kind||'na'}`);
       }
     }
     applyPreset(parts);
@@ -169,6 +149,12 @@
     const ua = navigator.userAgent || navigator.vendor || window.opera;
     const isAndroid = /android/i.test(ua);
     const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isInApp = /(FBAN|FBAV|Instagram|Line|TikTok|VKClient|VKShare|YaApp_Android|YaApp_iOS|OKApp)/i.test(ua);
+    if (isInApp) preferDeepLink = false; // не автозапускаем deep link внутри приложений
+    if (isInApp) {
+      const hint = document.getElementById('hint');
+      if (hint) hint.style.display = 'block';
+    }
 
     const tmeBase = publicUsername ? `https://t.me/${publicUsername}` : `https://t.me/${inviteCode}`;
     const tgDeep = publicUsername ? `tg://resolve?domain=${publicUsername}` : `tg://join?invite=${inviteCode.replace('+','')}`;
@@ -187,9 +173,23 @@
     const elOpen  = document.getElementById('openAppBtn');
     const elWeb   = document.getElementById('openWebBtn');
     const elStore = document.getElementById('storeBtn');
+    const elCopy  = document.getElementById('copyBtn');
 
     elWeb.href   = withUTM(webTg);
     elStore.href = withUTM(isIOS ? storeIOS : storeAndroid);
+
+    async function copyLink(e){
+      e.preventDefault();
+      const universalUrl = withUTM(tmeBase);
+      try {
+        await navigator.clipboard.writeText(universalUrl);
+        elCopy.textContent = 'Ссылка скопирована';
+        try { ym(104141664, 'reachGoal', 'copy_link'); } catch(_) {}
+      } catch(_){
+        alert('Скопируйте ссылку:\n' + universalUrl);
+      }
+    }
+    elCopy.addEventListener('click', copyLink);
 
     function tryOpenApp(){
       if (sessionStorage.getItem('opened')) return;
@@ -227,26 +227,20 @@
 
     if (preferDeepLink) setTimeout(tryOpenApp, 250);
 
-    [elOpen, elWeb, elStore].forEach(a=>a.setAttribute('target','_top'));
+    [elOpen, elWeb, elStore, elCopy].forEach(a=>a.setAttribute('target','_top'));
 
     // Метрика: цели кликов
-    [elOpen, elWeb, elStore].forEach(a=>{
+    [elOpen, elWeb, elStore, elCopy].forEach(a=>{
       a.addEventListener('click',()=>{
         try {
           if (a.id === 'openAppBtn') ym(104141664, 'reachGoal', 'open_app');
           if (a.id === 'openWebBtn') ym(104141664, 'reachGoal', 'open_web');
           if (a.id === 'storeBtn')   ym(104141664, 'reachGoal', 'open_store');
+          if (a.id === 'copyBtn')    ym(104141664, 'reachGoal', 'copy_link');
           console.log('click:', a.id, { utm: Object.fromEntries(utms.entries()) });
         } catch(_) {}
       });
     });
-
-    // A/B контроль задержек (например ?ab=fast)
-    const ab = (qs.get('ab')||'').toLowerCase();
-    if (ab === 'fast') {
-      // Можно ускорить тайминги, если захотите тестировать конверсию
-      // (оставлено как пример — используйте при необходимости)
-    }
   </script>
 </body>
 </html>
