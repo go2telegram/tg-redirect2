@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Открываем Telegram…</title>
   <meta name="robots" content="noindex,nofollow" />
+  <meta name="referrer" content="no-referrer" />
 
   <!-- Open Graph -->
   <meta property="og:title" content="Открываем Telegram" />
@@ -49,10 +50,10 @@
     <p>Нажмите кнопку ниже, чтобы перейти в Telegram. Если приложение не установлено — мы подскажем, как его скачать.</p>
 
     <div class="actions">
-      <a id="openAppBtn" class="btn primary" href="#">Открыть в Telegram</a>
-      <a id="openWebBtn" class="btn" href="#" rel="nofollow">Открыть в браузере</a>
-      <a id="storeBtn" class="btn" href="#" rel="nofollow">Установить Telegram</a>
-      <a id="copyBtn" class="btn" href="#" rel="nofollow">Скопировать ссылку</a>
+      <a id="openAppBtn" class="btn primary" href="#" rel="noopener">Открыть в Telegram</a>
+      <a id="openWebBtn" class="btn" href="#" rel="nofollow noopener">Открыть в браузере</a>
+      <a id="storeBtn" class="btn" href="#" rel="nofollow noopener">Установить Telegram</a>
+      <a id="copyBtn" class="btn" href="#" rel="nofollow noopener">Скопировать ссылку</a>
     </div>
 
     <p class="note" id="hint" style="display:none;">
@@ -66,51 +67,32 @@
     // =====================
     const inviteCode = "+oQf2XIfajeg5MDVi"; // приватная инвайт-ссылка
     const publicUsername = null;             // @username, если появится
-    const channelNames = { c1: "main", c2: "second", c3: "third" };
 
     // =====================
-    // Helpers
+    // Детект окружения
     // =====================
     const UA = (navigator.userAgent || '') + ' ' + (navigator.vendor || '');
     const REF = (document.referrer || '').toLowerCase();
+    const isIOS  = /iPhone|iPad|iPod/i.test(UA) || ((/Mac|Macintosh/i.test(UA)) && (navigator.maxTouchPoints||0) > 1);
+    const isAndroid = /android/i.test(UA);
+    const isInApp = /(Instagram|FBAN|FBAV|Line|OKApp|VK(Client|Share)|YaApp_Android|YaApp_iOS|Twitter|WeChat|Pinterest|Snapchat|LinkedIn|TTWebView|BytedanceWebview|Aweme|musical\.ly|TikTok)/i.test(UA) || REF.includes('tiktok.com') || REF.includes('instagram.com');
 
-    function isIOS(){
-      const p = navigator.platform || '';
-      return /iPhone|iPad|iPod/i.test(UA) ||
-             /iP(hone|ad|od)/i.test(p) ||
-             ((/Mac|Macintosh/i.test(UA+p)) && (navigator.maxTouchPoints||0) > 1);
-    }
-    function isAndroid(){ return /android/i.test(UA); }
-
-    function isInApp(){
-      const patterns = /(Instagram|FBAN|FBAV|Line|YaApp_Android|YaApp_iOS|OKApp|VK(Client|Share)|Twitter|WeChat|Pinterest|Snapchat|LinkedIn|GSA|DuckDuckGo|CriOS)/i;
-      const tiktok = /(TikTok|TTWebView|BytedanceWebview|Aweme|musical\.ly)/i;
-      return patterns.test(UA) || tiktok.test(UA) || REF.includes('tiktok.com') || REF.includes('instagram.com');
-    }
-
-    // управление автостартом: по умолчанию ВЫКЛ, включаем только если не in-app и не запрещено параметром
+    // Автозапуск: по умолчанию ОТКЛ для всех, включается только параметром ?auto=1
     const qp = new URLSearchParams(location.search);
-    const autoParam = qp.get('auto'); // auto=1 включает насильно, auto=0 выключает
-    let preferDeepLink = false;
-    if (autoParam === '1') preferDeepLink = true;
-    else if (autoParam === '0') preferDeepLink = false;
-    else {
-      preferDeepLink = !isInApp() && (isIOS() || isAndroid());
-    }
+    const preferDeepLink = qp.get('auto') === '1';
 
-    // показать подсказку в in-app
-    if (isInApp()) {
+    // показываем подсказку в in-app
+    if (isInApp) {
       const hint = document.getElementById('hint');
       if (hint) hint.style.display = 'block';
     }
 
     // =====================
-    // 🔗 ССЫЛКИ И РЕДИРЕКТЫ
+    // Ссылки
     // =====================
     const tmeBase = publicUsername ? `https://t.me/${publicUsername}` : `https://t.me/${inviteCode}`;
-    const tgDeep = publicUsername ? `tg://resolve?domain=${publicUsername}` : `tg://join?invite=${inviteCode.replace('+','')}`;
-    const webTg = publicUsername ? `https://web.telegram.org/k/#@${publicUsername}` : tmeBase;
-
+    const tgDeep  = publicUsername ? `tg://resolve?domain=${publicUsername}` : `tg://join?invite=${inviteCode.replace('+','')}`;
+    const webTg   = publicUsername ? `https://web.telegram.org/k/#@${publicUsername}` : tmeBase;
     const storeIOS = `https://apps.apple.com/app/telegram-messenger/id686449807`;
     const storeAndroid = `https://play.google.com/store/apps/details?id=org.telegram.messenger`;
     const storeDesktop = `https://telegram.org/apps`;
@@ -138,8 +120,8 @@
     elStore.addEventListener('click', (e)=>{
       e.preventDefault();
       let target = storeDesktop;
-      if (isIOS()) target = storeIOS;
-      else if (isAndroid()) target = storeAndroid;
+      if (isIOS) target = storeIOS;
+      else if (isAndroid) target = storeAndroid;
       location.href = withUTM(target);
       try { ym(104141664, 'reachGoal', 'open_store'); } catch(_) {}
     });
@@ -151,9 +133,6 @@
     });
 
     function tryOpenApp(){
-      if (sessionStorage.getItem('opened')) return;
-      sessionStorage.setItem('opened','1');
-
       const universalUrl = withUTM(tmeBase);
       let didHide = false;
       const onHide = () => { didHide = true; cleanup(); };
@@ -166,10 +145,10 @@
       window.addEventListener('pagehide', onHide);
       window.addEventListener('blur', onHide);
 
-      if(isIOS()){
+      if(isIOS){
         setTimeout(()=>{ location.href = universalUrl; }, 700);
         setTimeout(() => { if(!didHide) location.href = withUTM(storeIOS); }, 2200);
-      } else if(isAndroid()){
+      } else if(isAndroid){
         const iframe = document.createElement('iframe');
         iframe.style.display = 'none';
         iframe.src = tgDeep;
@@ -183,7 +162,6 @@
     }
 
     elOpen.addEventListener('click', (e)=>{ e.preventDefault(); tryOpenApp(); });
-
     if (preferDeepLink) setTimeout(tryOpenApp, 350);
 
     [elOpen, elWeb, elStore, elCopy].forEach(a=>a.setAttribute('target','_top'));
