@@ -25,7 +25,6 @@
     .btn { appearance:none; border:none; padding:14px 16px; border-radius:14px; background:#2a3141; color:var(--text); cursor:pointer; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:10px }
     .btn.primary { background:#2385ff; color:white }
     .btn:focus { outline:2px solid #3c8dff66; outline-offset:2px }
-    .small { font-size: 13px; color: var(--muted); margin-top: 12px }
     .note { margin-top:14px; font-size:13px; color:#93a0af }
   </style>
 
@@ -57,7 +56,7 @@
     </div>
 
     <p class="note" id="hint" style="display:none;">
-      Похоже, вы открыли ссылку внутри приложения. Нажмите <b>⋯</b> или кнопку меню и выберите <b>Открыть в Safari/браузере</b>. Либо скопируйте ссылку и вставьте в адресную строку.
+      Похоже, вы открыли ссылку внутри приложения (Instagram/TikTok). Нажмите <b>⋯</b> и выберите <b>Открыть в Safari/браузере</b>. Либо скопируйте ссылку и вставьте вручную.
     </p>
   </div>
 
@@ -68,94 +67,46 @@
     const inviteCode = "+oQf2XIfajeg5MDVi"; // приватная инвайт-ссылка
     const publicUsername = null;             // @username, если появится
     const channelNames = { c1: "main", c2: "second", c3: "third" };
-    let preferDeepLink = true;               // автооткрытие приложения
 
     // =====================
-    // 🚀 ЛОГИКА UTM/ПРЕСЕТОВ
+    // Helpers
     // =====================
-    const qs = new URLSearchParams(location.search);
-    const utms = new URLSearchParams();
-    const UTM_KEYS = ["utm_source","utm_medium","utm_campaign","utm_content","utm_term","s","src","ref","gclid","fbclid","ttclid","yclid"];
-    UTM_KEYS.forEach(k=>{ if(qs.get(k)) utms.set(k, qs.get(k)); });
+    const UA = (navigator.userAgent || '') + ' ' + (navigator.vendor || '');
+    const REF = (document.referrer || '').toLowerCase();
 
-    // Алиасы: /<platform>/<channel>/<kind>
-    const path = (location.pathname || '').replace(/\/+$/,'').toLowerCase();
-    const parts = path.split('/').filter(Boolean);
-
-    function applyPreset(parts){
-      if (!parts.length) return;
-      const platform = parts[0];            // yt/ig/tt/ads
-      const ch = parts[1];                  // c1/c2/c3 | network для ads
-      const kind = parts[2];                // v/s/live/story/bio/...
-
-      const chName = channelNames[ch] || ch || 'na';
-
-      if (platform === 'yt') {
-        if (!utms.get('utm_source')) utms.set('utm_source','youtube');
-        if (!utms.get('utm_medium')) {
-          if (kind === 's') utms.set('utm_medium','shorts');
-          else if (kind === 'live') utms.set('utm_medium','live');
-          else utms.set('utm_medium','video');
-        }
-        if (!utms.get('utm_campaign')) utms.set('utm_campaign', `yt_${chName}`);
-        if (!utms.get('utm_content') && kind) utms.set('utm_content', kind);
-      }
-      if (platform === 'ig') {
-        if (!utms.get('utm_source')) utms.set('utm_source','instagram');
-        if (!utms.get('utm_medium')) {
-          if (kind === 'story') utms.set('utm_medium','story');
-          else if (kind === 'reels') utms.set('utm_medium','reels');
-          else if (kind === 'bio') utms.set('utm_medium','bio');
-          else utms.set('utm_medium','post');
-        }
-        if (!utms.get('utm_campaign')) utms.set('utm_campaign', `ig_${chName}`);
-        if (!utms.get('utm_content') && kind) utms.set('utm_content', kind);
-      }
-      if (platform === 'tt') {
-        if (!utms.get('utm_source')) utms.set('utm_source','tiktok');
-        if (!utms.get('utm_medium')) {
-          if (kind === 'bio') utms.set('utm_medium','bio');
-          else utms.set('utm_medium','video');
-        }
-        if (!utms.get('utm_campaign')) utms.set('utm_campaign', `tt_${chName}`);
-        if (!utms.get('utm_content') && kind) utms.set('utm_content', kind);
-      }
-      if (platform === 'ads') {
-        const net = ch || 'meta';
-        if (!utms.get('utm_source')) utms.set('utm_source', net); // meta/google/tiktok/yandex/vk
-        if (!utms.get('utm_medium')) utms.set('utm_medium','ads');
-        if (!utms.get('utm_campaign')) utms.set('utm_campaign', `ads_${channelNames[kind]||kind||'na'}`);
-      }
+    function isIOS(){
+      const p = navigator.platform || '';
+      return /iPhone|iPad|iPod/i.test(UA) ||
+             /iP(hone|ad|od)/i.test(p) ||
+             ((/Mac|Macintosh/i.test(UA+p)) && (navigator.maxTouchPoints||0) > 1);
     }
-    applyPreset(parts);
+    function isAndroid(){ return /android/i.test(UA); }
 
-    // Отправим UTM в Метрику как параметры визита
-    try { ym(104141664, 'params', { utm: Object.fromEntries(utms.entries()) }); } catch (_) {}
-
-    // =====================
-    // 🔗 ССЫЛКИ И РЕДИРЕКТЫ
-    // =====================
-    function isIOSDevice(){
-      const ua = navigator.userAgent || '';
-      const plat = navigator.platform || '';
-      // iPhone/iPad/iPod or iPadOS masquerading as Mac
-      return /iPhone|iPad|iPod/i.test(ua) ||
-             /iP(hone|ad|od)/i.test(plat) ||
-             (/Mac/i.test(plat || ua) && (navigator.maxTouchPoints || 0) > 1) ||
-             (/Macintosh/i.test(ua) && 'ontouchend' in document);
-    }
-    function isAndroidDevice(){ return /android/i.test(navigator.userAgent || ''); }
     function isInApp(){
-      const ua = navigator.userAgent || '';
-      return /(FBAN|FBAV|Instagram|Line|TikTok|VKClient|VKShare|YaApp_Android|YaApp_iOS|OKApp)/i.test(ua);
+      const patterns = /(Instagram|FBAN|FBAV|Line|YaApp_Android|YaApp_iOS|OKApp|VK(Client|Share)|Twitter|WeChat|Pinterest|Snapchat|LinkedIn|GSA|DuckDuckGo|CriOS)/i;
+      const tiktok = /(TikTok|TTWebView|BytedanceWebview|Aweme|musical\.ly)/i;
+      return patterns.test(UA) || tiktok.test(UA) || REF.includes('tiktok.com') || REF.includes('instagram.com');
     }
 
-    if (isInApp()) preferDeepLink = false; // не автозапускаем deep link внутри приложений
+    // управление автостартом: по умолчанию ВЫКЛ, включаем только если не in-app и не запрещено параметром
+    const qp = new URLSearchParams(location.search);
+    const autoParam = qp.get('auto'); // auto=1 включает насильно, auto=0 выключает
+    let preferDeepLink = false;
+    if (autoParam === '1') preferDeepLink = true;
+    else if (autoParam === '0') preferDeepLink = false;
+    else {
+      preferDeepLink = !isInApp() && (isIOS() || isAndroid());
+    }
+
+    // показать подсказку в in-app
     if (isInApp()) {
       const hint = document.getElementById('hint');
       if (hint) hint.style.display = 'block';
     }
 
+    // =====================
+    // 🔗 ССЫЛКИ И РЕДИРЕКТЫ
+    // =====================
     const tmeBase = publicUsername ? `https://t.me/${publicUsername}` : `https://t.me/${inviteCode}`;
     const tgDeep = publicUsername ? `tg://resolve?domain=${publicUsername}` : `tg://join?invite=${inviteCode.replace('+','')}`;
     const webTg = publicUsername ? `https://web.telegram.org/k/#@${publicUsername}` : tmeBase;
@@ -165,6 +116,12 @@
     const storeDesktop = `https://telegram.org/apps`;
 
     function withUTM(url){
+      const utms = new URLSearchParams();
+      const qs = new URLSearchParams(location.search);
+      ["utm_source","utm_medium","utm_campaign","utm_content","utm_term","s","src","ref","gclid","fbclid","ttclid","yclid"].forEach(k=>{
+        const v = qs.get(k);
+        if (v) utms.set(k, v);
+      });
       if(!utms.toString()) return url;
       const u = new URL(url);
       utms.forEach((v,k)=>u.searchParams.set(k,v));
@@ -178,28 +135,20 @@
 
     elWeb.href = withUTM(webTg);
 
-    // Store: решаем целевой магазин при клике (надёжнее, чем заранее)
     elStore.addEventListener('click', (e)=>{
       e.preventDefault();
       let target = storeDesktop;
-      if (isIOSDevice()) target = storeIOS;
-      else if (isAndroidDevice()) target = storeAndroid;
+      if (isIOS()) target = storeIOS;
+      else if (isAndroid()) target = storeAndroid;
       location.href = withUTM(target);
       try { ym(104141664, 'reachGoal', 'open_store'); } catch(_) {}
     });
 
-    async function copyLink(e){
+    elCopy.addEventListener('click', async (e)=>{
       e.preventDefault();
       const universalUrl = withUTM(tmeBase);
-      try {
-        await navigator.clipboard.writeText(universalUrl);
-        elCopy.textContent = 'Ссылка скопирована';
-        try { ym(104141664, 'reachGoal', 'copy_link'); } catch(_) {}
-      } catch(_){
-        alert('Скопируйте ссылку:\n' + universalUrl);
-      }
-    }
-    elCopy.addEventListener('click', copyLink);
+      try { await navigator.clipboard.writeText(universalUrl); elCopy.textContent = 'Ссылка скопирована'; ym(104141664, 'reachGoal', 'copy_link'); } catch(_) { alert('Скопируйте ссылку:\\n' + universalUrl); }
+    });
 
     function tryOpenApp(){
       if (sessionStorage.getItem('opened')) return;
@@ -217,17 +166,17 @@
       window.addEventListener('pagehide', onHide);
       window.addEventListener('blur', onHide);
 
-      if(isIOSDevice()){
-        setTimeout(()=>{ location.href = universalUrl; }, 600);
-        setTimeout(() => { if(!didHide) location.href = withUTM(storeIOS); }, 2000);
-      } else if(isAndroidDevice()){
+      if(isIOS()){
+        setTimeout(()=>{ location.href = universalUrl; }, 700);
+        setTimeout(() => { if(!didHide) location.href = withUTM(storeIOS); }, 2200);
+      } else if(isAndroid()){
         const iframe = document.createElement('iframe');
         iframe.style.display = 'none';
         iframe.src = tgDeep;
         document.body.appendChild(iframe);
 
         setTimeout(() => { if(!didHide) location.href = universalUrl; }, 900);
-        setTimeout(() => { if(!didHide) location.href = withUTM(storeAndroid); }, 2000);
+        setTimeout(() => { if(!didHide) location.href = withUTM(storeAndroid); }, 2200);
       } else {
         location.href = universalUrl;
       }
@@ -235,7 +184,7 @@
 
     elOpen.addEventListener('click', (e)=>{ e.preventDefault(); tryOpenApp(); });
 
-    if (preferDeepLink) setTimeout(tryOpenApp, 300);
+    if (preferDeepLink) setTimeout(tryOpenApp, 350);
 
     [elOpen, elWeb, elStore, elCopy].forEach(a=>a.setAttribute('target','_top'));
   </script>
