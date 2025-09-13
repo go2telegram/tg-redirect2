@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Переход в Telegram…</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <style>
+    :root { --bg:#0f1115; --card:#161a22; --text:#e8ecf1; --muted:#a9b1bd; }
+    * { box-sizing: border-box }
+    html,body { height:100% }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji","Segoe UI Emoji"; background:var(--bg); color:var(--text); display:grid; place-items:center }
+    .card { width:min(720px, 92vw); background:var(--card); padding:28px; border-radius:20px; box-shadow: 0 10px 30px rgba(0,0,0,.35) }
+    h1 { font-size: clamp(22px, 3.2vw, 28px); margin: 0 0 8px }
+    p { color: var(--muted); line-height:1.5; margin: 8px 0 }
+    .actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px }
+    .btn { appearance:none; border:none; padding:14px 16px; border-radius:14px; background:#2a3141; color:var(--text); cursor:pointer; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:10px }
+    .btn.primary { background:#2385ff; color:white }
+    .btn:focus { outline:2px solid #3c8dff66; outline-offset:2px }
+    code { background:#0f131a; padding:2px 6px; border-radius:6px }
+    .small { font-size: 13px; color: var(--muted); margin-top: 12px }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Открываем Telegram…</h1>
+    <p>Если ничего не происходит в течение пары секунд — нажми кнопку ниже. Страница сама подберёт лучший вариант: открыть приложение, либо отправить на установку.</p>
+
+    <div class="actions">
+      <a id="openAppBtn" class="btn primary" href="#">Открыть в Telegram</a>
+      <a id="openWebBtn" class="btn" href="#" rel="nofollow">Открыть в браузере</a>
+      <a id="storeBtn" class="btn" href="#" rel="nofollow">Установить Telegram</a>
+    </div>
+
+    <p class="small">Твой источник: <code id="src">direct</code>. Все UTM пометки мы передадим дальше.</p>
+  </div>
+
+  <script>
+    // =====================
+    // ⚙️ НАСТРОЙКИ
+    // =====================
+    // ВАРИАНТ 1: приватная инвайт-ссылка вида https://t.me/+XXXXXXXXXXXXXX
+    const inviteCode = "+oQf2XIfajeg5MDVi"; // ← подставь свой (+код)
+
+    // ВАРИАНТ 2: если есть публичный @username у канала/чата — указать ниже, тогда будет использоваться tg://resolve
+    const publicUsername = null; // например: "pyat_kluchey_zdorovya" или null
+
+    // Включить принудительное открытие в app при возможности (true/false)
+    const preferDeepLink = true;
+
+    // =====================
+    // 🚀 ЛОГИКА
+    // =====================
+    const qs = new URLSearchParams(location.search);
+    const utms = new URLSearchParams();
+    const UTM_KEYS = ["utm_source","utm_medium","utm_campaign","utm_content","utm_term","s","src","ref"];
+    UTM_KEYS.forEach(k=>{ if(qs.get(k)) utms.set(k, qs.get(k)); });
+
+    // Источник для подписи
+    const srcText = qs.get("utm_source") || qs.get("src") || (document.referrer ? new URL(document.referrer).hostname : "direct");
+    document.getElementById('src').textContent = srcText;
+
+    // Детект платформы
+    const ua = navigator.userAgent || navigator.vendor || window.opera;
+    const isAndroid = /android/i.test(ua);
+    const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPadOS
+
+    // Сборка ссылок
+    const tmeBase = publicUsername ? `https://t.me/${publicUsername}` : `https://t.me/${inviteCode}`; // универсальная ссылка
+    const tgDeep = publicUsername
+      ? `tg://resolve?domain=${publicUsername}`
+      : `tg://join?invite=${inviteCode.replace('+','')}`;
+    const webTg = publicUsername ? `https://web.telegram.org/k/#@${publicUsername}` : tmeBase; // web вариант
+
+    const storeIOS = `https://apps.apple.com/app/telegram-messenger/id686449807`;
+    const storeAndroid = `https://play.google.com/store/apps/details?id=org.telegram.messenger`;
+
+    function withUTM(url){
+      if(!utms.toString()) return url;
+      const u = new URL(url);
+      utms.forEach((v,k)=>u.searchParams.set(k,v));
+      return u.toString();
+    }
+
+    const elOpen = document.getElementById('openAppBtn');
+    const elWeb  = document.getElementById('openWebBtn');
+    const elStore= document.getElementById('storeBtn');
+
+    elWeb.href = withUTM(webTg);
+    elStore.href = withUTM(isIOS ? storeIOS : storeAndroid);
+
+    function tryOpenApp(){
+      const appUrl = tgDeep;
+      const universalUrl = withUTM(tmeBase);
+
+      let didHide = false;
+      const onHide = () => { didHide = true; cleanup(); };
+      const cleanup = () => {
+        document.removeEventListener('visibilitychange', onHide);
+        window.removeEventListener('pagehide', onHide);
+        window.removeEventListener('blur', onHide);
+      };
+      document.addEventListener('visibilitychange', onHide);
+      window.addEventListener('pagehide', onHide);
+      window.addEventListener('blur', onHide);
+
+      if(isIOS){
+        location.href = universalUrl;
+        setTimeout(() => { if(!didHide) location.href = withUTM(storeIOS); }, 1500);
+      } else if(isAndroid){
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = appUrl;
+        document.body.appendChild(iframe);
+
+        setTimeout(() => { if(!didHide) location.href = universalUrl; }, 800);
+        setTimeout(() => { if(!didHide) location.href = withUTM(storeAndroid); }, 1800);
+      } else {
+        location.href = universalUrl;
+      }
+    }
+
+    elOpen.addEventListener('click', (e)=>{
+      e.preventDefault();
+      tryOpenApp();
+    });
+
+    if (preferDeepLink) setTimeout(tryOpenApp, 250);
+    [elOpen, elWeb, elStore].forEach(a=>a.setAttribute('target','_top'));
+  </script>
+</body>
+</html>
