@@ -1,141 +1,343 @@
-<!doctype html>
-<html lang="ru">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Открываем Telegram…</title>
-  <meta name="robots" content="noindex,nofollow" />
-
+  <title>Opening Telegram…</title>
+  <meta name="description" content="Join the Telegram channel. Open in the app, use the browser, or install Telegram." />
+  <meta name="theme-color" content="#0f1115" />
+  <meta property="og:title" content="Opening Telegram…" />
+  <meta property="og:description" content="Click a button below to join via Telegram." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://dummyimage.com/1200x630/0f1115/ffffff&text=Telegram+Redirect" />
   <style>
-    :root { --bg:#0f1115; --card:#161a22; --text:#e8ecf1; --muted:#a9b1bd; }
-    * { box-sizing: border-box }
-    html,body { height:100% }
-    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial; background:var(--bg); color:var(--text); display:grid; place-items:center }
-    .card { width:min(820px, 92vw); background:var(--card); padding:28px; border-radius:20px; box-shadow: 0 10px 30px rgba(0,0,0,.35) }
-    h1 { font-size: clamp(22px, 3.2vw, 28px); margin: 0 0 8px }
-    p { color: var(--muted); line-height:1.5; margin: 8px 0 }
-    .actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px }
-    .btn { appearance:none; border:none; padding:14px 16px; border-radius:14px; background:#2a3141; color:var(--text); cursor:pointer; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:10px }
-    .btn.primary { background:#2385ff; color:white }
-    .btn:focus { outline:2px solid #3c8dff66; outline-offset:2px }
-    .note { margin-top:14px; font-size:13px; color:#93a0af }
+    :root {
+      --bg: #0f1115;
+      --gradient: radial-gradient(1200px 800px at 70% -10%, #1a2030 0%, rgba(15, 17, 21, 0) 60%);
+      --card: #141821;
+      --text: #e6e8ec;
+      --muted: #a3a7b0;
+      --btn: #1b88ff;
+      --btn-hover: #3a9bff;
+      --btn2: #232a36;
+      --btn2-hover: #2d3646;
+      --radius: 16px;
+      --transition: 0.2s ease;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { height: 100%; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      background-image: var(--gradient);
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Helvetica Neue", "Noto Sans", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 940px;
+      background: var(--card);
+      border-radius: 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      padding: clamp(28px, 4vw, 40px);
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: clamp(28px, 5vw, 40px);
+      letter-spacing: 0.2px;
+    }
+
+    p {
+      margin: 0 0 24px;
+      color: var(--muted);
+      font-size: clamp(16px, 2.6vw, 18px);
+      line-height: 1.5;
+    }
+
+    .grid {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      appearance: none;
+      border: 0;
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      background: var(--btn2);
+      color: var(--text);
+      transition: transform 0.06s ease, opacity var(--transition), background var(--transition);
+    }
+
+    .btn.primary {
+      background: var(--btn);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      background: var(--btn2-hover);
+    }
+
+    .btn.primary:hover {
+      background: var(--btn-hover);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+      opacity: 0.88;
+    }
+
+    .btn:focus-visible {
+      outline: 2px solid rgba(27, 136, 255, 0.55);
+      outline-offset: 2px;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 26px;
+      transform: translateX(-50%);
+      background: rgba(27, 35, 50, 0.92);
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 14px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+    }
+
+    .note {
+      margin-top: 18px;
+      color: #8891a1;
+      font-size: 14px;
+    }
+
+    @media (max-width: 520px) {
+      .grid {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+      }
+    }
   </style>
-
-  <!-- Yandex.Metrika counter (ID: 104141664) -->
-<script type="text/javascript">
-    (function(m,e,t,r,i,k,a){
-        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-        m[i].l=1*new Date();
-        for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
-        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
-    })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=104141664', 'ym');
-
-    ym(104141664, 'init', {ssr:true, clickmap:true, ecommerce:"dataLayer", accurateTrackBounce:true, trackLinks:true});
-    ym(104141664, 'reachGoal', 'visit');
-</script>
-<noscript><div><img src="https://mc.yandex.ru/watch/104141664" style="position:absolute; left:-9999px;" alt=""/></div></noscript>
 </head>
 <body>
-  <div class="card">
-    <h1>Открываем Telegram…</h1>
-    <p>Нажмите кнопку ниже, чтобы перейти в Telegram. Если приложение не установлено — мы подскажем, как его скачать.</p>
-
-    <div class="actions">
-      <a id="openAppBtn" class="btn primary" href="#">Открыть в Telegram</a>
-      <a id="openWebBtn" class="btn" href="#" rel="nofollow">Открыть в браузере</a>
-      <a id="storeBtn" class="btn" href="#" rel="nofollow">Установить Telegram</a>
-      <a id="copyBtn" class="btn" href="#" rel="nofollow">Скопировать ссылку</a>
+  <div class="card" role="region" aria-label="Telegram redirect">
+    <h1>Opening Telegram…</h1>
+    <p>Click a button below to join via Telegram. If the app isn’t installed, use the browser or download the app.</p>
+    <div class="grid">
+      <button id="btn-open-app" class="btn primary" type="button">Open in Telegram</button>
+      <button id="btn-open-web" class="btn" type="button">Open in Browser</button>
+      <button id="btn-download" class="btn" type="button">Get Telegram</button>
+      <button id="btn-copy" class="btn" type="button">Copy Link</button>
     </div>
-
-    <p class="note" id="hint" style="display:none;">Похоже, вы открыли ссылку внутри приложения. Выберите <b>Открыть в браузере</b> в меню <b>⋯</b> или скопируйте ссылку.</p>
+    <div class="note" id="platform-note" aria-live="polite"></div>
   </div>
+  <div id="toast" class="toast" role="status" aria-live="polite">Link copied</div>
 
   <script>
-    const inviteCode = "+oQf2XIfajeg5MDVi";
-    const publicUsername = null;
+    // ===== CONFIG =====
+    const TARGET_URL = "https://t.me/+iV_wv-sPlZhhNjFi";       // final URL
+    const TG_INVITE_TOKEN = "iV_wv-sPlZhhNjFi";                 // invite token after +
+    const YA_COUNTER_ID = 99999999;                             // <-- REPLACE with real Yandex.Metrika ID
 
-    const UA = (navigator.userAgent || '') + ' ' + (navigator.vendor || '');
-    const isAndroid = /android/i.test(UA);
-    const isIOS = /iPhone|iPad|iPod/i.test(UA) || ((/Mac|Macintosh/i.test(UA)) && (navigator.maxTouchPoints||0) > 1);
-    const isInApp  = /(Instagram|FBAN|FBAV|TikTok|TTWebView|BytedanceWebview|Aweme|musical\.ly|VK(Client|Share)|OKApp|YaApp_Android|YaApp_iOS)/i.test(UA);
-
-    if (isInApp) {
-      const hint = document.getElementById('hint');
-      if (hint) hint.style.display = 'block';
+    // ===== UTM / Ref capture =====
+    const params = new URLSearchParams(window.location.search);
+    const hasTrackedParams = [...params.keys()].some(key => key.startsWith("utm_")) || params.has("ref");
+    if (hasTrackedParams) {
+      sessionStorage.setItem("redirect_ref", window.location.search.replace(/^\?/, ""));
     }
+    const storedRef = sessionStorage.getItem("redirect_ref") || "";
 
-    const tmeBase = publicUsername ? `https://t.me/${publicUsername}` : `https://t.me/${inviteCode}`;
-    const tgDeep  = publicUsername ? `tg://resolve?domain=${publicUsername}` : `tg://join?invite=${inviteCode.replace('+','')}`;
-    const webTg   = publicUsername ? `https://web.telegram.org/k/#@${publicUsername}` : tmeBase;
-    const storeIOS = `https://apps.apple.com/app/telegram-messenger/id686449807`;
-    const storeAndroid = `https://play.google.com/store/apps/details?id=org.telegram.messenger`;
-    const storeDesktop = `https://telegram.org/apps`;
+    // ===== Platform detection =====
+    const ua = navigator.userAgent || "";
+    const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const isAndroid = /Android/i.test(ua);
+    const isDesktop = !isIOS && !isAndroid;
 
-    function withUTM(url){
-      const qs = new URLSearchParams(location.search);
-      const keep = ["utm_source","utm_medium","utm_campaign","utm_content","utm_term","s","src","ref","gclid","fbclid","ttclid","yclid"];
-      const u = new URL(url);
-      keep.forEach(k=>{ const v = qs.get(k); if(v) u.searchParams.set(k,v); });
-      return u.toString();
-    }
-
-    // --- NEW: inject UTM into page URL for Yandex Metrika standard reports ---
-    try {
-      const qs = new URLSearchParams(location.search);
-      const url = new URL(location.href);
-      let changed = false;
-      ["utm_source","utm_medium","utm_campaign","utm_content"].forEach(k=>{
-        if(qs.get(k)) {
-          if (url.searchParams.get(k) !== qs.get(k)) {
-            url.searchParams.set(k, qs.get(k));
-            changed = true;
+    // ===== Metrics helper =====
+    const goalQueue = [];
+    let flushHandle = null;
+    function flushGoals() {
+      if (typeof ym === "function") {
+        while (goalQueue.length) {
+          const goalName = goalQueue.shift();
+          try {
+            ym(YA_COUNTER_ID, "reachGoal", goalName);
+          } catch (err) {
+            // If ym throws, stop flushing to avoid infinite loop
+            break;
           }
         }
-      });
-      if (changed) history.replaceState(null, "", url.toString());
-    } catch(_) {}
-
-    const elOpen  = document.getElementById('openAppBtn');
-    const elWeb   = document.getElementById('openWebBtn');
-    const elStore = document.getElementById('storeBtn');
-    const elCopy  = document.getElementById('copyBtn');
-
-    elWeb.href = withUTM(webTg);
-
-    elStore.addEventListener('click', (e)=>{
-      e.preventDefault();
-      let target = storeDesktop;
-      if (isIOS) target = storeIOS;
-      else if (isAndroid) target = storeAndroid;
-      location.href = withUTM(target);
-      try { ym(104141664, 'reachGoal', 'open_store'); } catch(_) {}
-    });
-
-    elCopy.addEventListener('click', async (e)=>{
-      e.preventDefault();
-      try { await navigator.clipboard.writeText(withUTM(tmeBase)); elCopy.textContent = 'Ссылка скопирована'; ym(104141664, 'reachGoal', 'copy_link'); } catch(_){ alert('Скопируйте ссылку:\n' + withUTM(tmeBase)); }
-    });
-
-    function tryOpenApp(){
-      if(isIOS){
-        location.href = withUTM(tmeBase);
-        setTimeout(()=>{ location.href = withUTM(storeIOS); }, 1800);
-      } else if(isAndroid){
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        iframe.src = tgDeep;
-        document.body.appendChild(iframe);
-        setTimeout(()=>{ location.href = withUTM(tmeBase); }, 800);
-        setTimeout(()=>{ location.href = withUTM(storeAndroid); }, 1800);
-      } else {
-        location.href = withUTM(tmeBase);
+      } else if (!flushHandle) {
+        flushHandle = setTimeout(() => {
+          flushHandle = null;
+          flushGoals();
+        }, 600);
       }
-      try { ym(104141664, 'reachGoal', 'open_app'); } catch(_) {}
     }
 
-    elOpen.addEventListener('click', (e)=>{ e.preventDefault(); tryOpenApp(); });
+    function goal(name) {
+      goalQueue.push(name);
+      flushGoals();
+    }
 
-    [elOpen, elWeb, elStore, elCopy].forEach(a=>a.setAttribute('target','_top'));
+    // ===== UI helpers =====
+    const toastEl = document.getElementById("toast");
+    let toastTimer = null;
+    function showToast(message) {
+      toastEl.textContent = message;
+      toastEl.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1800);
+    }
+
+    function appendRefParam(baseUrl) {
+      if (!storedRef) return baseUrl;
+      try {
+        const url = new URL(baseUrl);
+        url.searchParams.set("ref", storedRef);
+        return url.toString();
+      } catch (err) {
+        const joiner = baseUrl.includes("?") ? "&" : "?";
+        return `${baseUrl}${joiner}ref=${encodeURIComponent(storedRef)}`;
+      }
+    }
+
+    function openTelegramApp() {
+      const appUrl = `tg://join?invite=${TG_INVITE_TOKEN}`;
+      goal("open_app");
+
+      if (isIOS || isAndroid) {
+        const fallbackDelay = isIOS ? 1600 : 1200;
+        const fallbackId = setTimeout(() => {
+          if (!document.hidden) {
+            window.location.href = TARGET_URL;
+          }
+        }, fallbackDelay);
+
+        const visibilityHandler = () => {
+          if (document.hidden) {
+            clearTimeout(fallbackId);
+            document.removeEventListener("visibilitychange", visibilityHandler);
+          }
+        };
+
+        document.addEventListener("visibilitychange", visibilityHandler);
+
+        setTimeout(() => {
+          clearTimeout(fallbackId);
+          document.removeEventListener("visibilitychange", visibilityHandler);
+        }, 4000);
+      }
+
+      window.location.href = appUrl;
+    }
+
+    function openTelegramWeb() {
+      goal("open_web");
+      window.location.href = TARGET_URL;
+    }
+
+    function downloadTelegram() {
+      goal("download");
+      if (isIOS) {
+        window.location.href = appendRefParam("https://apps.apple.com/app/telegram-messenger/id686449807");
+      } else if (isAndroid) {
+        window.location.href = appendRefParam("https://play.google.com/store/apps/details?id=org.telegram.messenger");
+      } else {
+        window.location.href = appendRefParam("https://desktop.telegram.org/");
+      }
+    }
+
+    function copyLink() {
+      const text = TARGET_URL;
+      const onSuccess = () => {
+        showToast("Link copied");
+        goal("copy_link");
+      };
+      const onFailure = () => {
+        showToast("Copy failed");
+      };
+
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+        navigator.clipboard.writeText(text).then(onSuccess).catch(onFailure);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "absolute";
+        textarea.style.left = "-9999px";
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+          const successful = document.execCommand("copy");
+          if (successful) {
+            onSuccess();
+          } else {
+            onFailure();
+          }
+        } catch (err) {
+          onFailure();
+        }
+        document.body.removeChild(textarea);
+      }
+    }
+
+    // ===== Bindings =====
+    document.getElementById("btn-open-app").addEventListener("click", openTelegramApp);
+    document.getElementById("btn-open-web").addEventListener("click", openTelegramWeb);
+    document.getElementById("btn-download").addEventListener("click", downloadTelegram);
+    document.getElementById("btn-copy").addEventListener("click", copyLink);
+
+    // ===== Platform note =====
+    const note = document.getElementById("platform-note");
+    if (note) {
+      note.textContent = `Detected: ${isIOS ? "iOS" : isAndroid ? "Android" : "Desktop"}`;
+    }
+    goal("auto_detect_os");
+    flushGoals();
   </script>
+
+  <!-- ===== Yandex.Metrika ===== -->
+  <script type="text/javascript">
+    (function(m,e,t,r,i,k,a){
+      m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+      m[i].l=1*new Date();
+      k=e.createElement(t),a=e.getElementsByTagName(t)[0];
+      k.async=1;k.src=r;a.parentNode.insertBefore(k,a);
+    })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+
+    ym(YA_COUNTER_ID, "init", {
+      clickmap: true,
+      trackLinks: true,
+      accurateTrackBounce: true,
+      defer: true
+    });
+  </script>
+  <noscript><div><img src="https://mc.yandex.ru/watch/99999999" style="position:absolute; left:-9999px;" alt=""/></div></noscript>
+  <!-- ========================== -->
 </body>
 </html>
