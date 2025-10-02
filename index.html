@@ -161,7 +161,7 @@
     // ===== CONFIG =====
     const TARGET_URL = "https://t.me/+iV_wv-sPlZhhNjFi";       // final URL
     const TG_INVITE_TOKEN = "iV_wv-sPlZhhNjFi";                 // invite token after +
-    const YA_COUNTER_ID = 99999999;                             // <-- REPLACE with real Yandex.Metrika ID
+    const YA_COUNTER_ID = "{{YA_COUNTER_ID}}";                 // <-- REPLACE with real Yandex.Metrika ID
 
     // ===== UTM / Ref capture =====
     const params = new URLSearchParams(window.location.search);
@@ -337,7 +337,7 @@
       defer: true
     });
   </script>
-  <noscript><div><img src="https://mc.yandex.ru/watch/99999999" style="position:absolute; left:-9999px;" alt=""/></div></noscript>
+  <noscript><div><img src="https://mc.yandex.ru/watch/{{YA_COUNTER_ID}}" style="position:absolute; left:-9999px;" alt=""/></div></noscript>
   <!-- ========================== -->
 </body>
 </html>
