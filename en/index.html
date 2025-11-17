@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="referrer" content="origin-when-cross-origin" />
   <title>Opening Telegram…</title>
   <meta name="description" content="Join the Telegram channel. Open in the app, use the browser, or install Telegram." />
   <meta name="theme-color" content="#0f1115" />
@@ -32,6 +33,13 @@
     .toast.show{opacity:1}
     .note{margin-top:16px; color:#8891a1; font-size:14px}
   </style>
+
+  <script>
+    // Redirect settings
+    const TG_DEEPLINK_DEFAULT = "tg://join?invite=iV_wv-sPlZhhNjFi";
+    const TG_WEB_FALLBACK_DEFAULT = "https://t.me/+iV_wv-sPlZhhNjFi";
+    const YA_COUNTER_ID = 104141664;
+  </script>
 </head>
 <body>
   <div class="card">
@@ -48,55 +56,162 @@
   <div id="toast" class="toast">Link copied</div>
 
   <script>
-    const TARGET_URL = "https://t.me/+iV_wv-sPlZhhNjFi";
-    const TG_INVITE_TOKEN = "iV_wv-sPlZhhNjFi";
-    const YA_COUNTER_ID = {{YA_COUNTER_ID}}; // replace with real ID
+    const UA = (navigator.userAgent || '') + ' ' + (navigator.vendor || '');
+    const isAndroid = /android/i.test(UA);
+    const isIOS = /iPhone|iPad|iPod/i.test(UA) || ((/Mac|Macintosh/i.test(UA)) && (navigator.maxTouchPoints||0) > 1);
+    const isInApp  = /(Instagram|FBAN|FBAV|TikTok|TTWebView|BytedanceWebview|Aweme|musical\.ly|VK(Client|Share)|OKApp|YaApp_Android|YaApp_iOS)/i.test(UA);
 
-    const isIOS     = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const isAndroid = /Android/i.test(navigator.userAgent);
-
-    function goal(name){ try{ ym(YA_COUNTER_ID,"reachGoal",name);}catch(e){} }
-
-    function showToast(msg){
-      const t=document.getElementById("toast");
-      t.textContent=msg; t.classList.add("show");
-      setTimeout(()=>t.classList.remove("show"),1600);
+    const note = document.getElementById('platform-note');
+    if (note) {
+      if (isInApp) {
+        note.textContent = 'Looks like you opened the link inside another app. Use “Open in Browser” in the ⋯ menu.';
+      } else if (isIOS) {
+        note.textContent = 'Detected: iOS';
+      } else if (isAndroid) {
+        note.textContent = 'Detected: Android';
+      } else {
+        note.textContent = 'Detected: Desktop';
+      }
     }
 
-    document.getElementById("btn-open-app").onclick=()=>{
-      goal("open_app");
-      window.location.href=`tg://join?invite=${TG_INVITE_TOKEN}`;
-    };
-    document.getElementById("btn-open-web").onclick=()=>{
-      goal("open_web"); window.location.href=TARGET_URL;
-    };
-    document.getElementById("btn-download").onclick=()=>{
-      goal("download");
-      if(isIOS) window.location.href="https://apps.apple.com/app/telegram-messenger/id686449807";
-      else if(isAndroid) window.location.href="https://play.google.com/store/apps/details?id=org.telegram.messenger";
-      else window.location.href="https://desktop.telegram.org/";
-    };
-    document.getElementById("btn-copy").onclick=()=>{
-      navigator.clipboard.writeText(TARGET_URL).then(()=>{
-        showToast("Link copied"); goal("copy_link");
-      });
-    };
+    const storeIOS = `https://apps.apple.com/app/telegram-messenger/id686449807`;
+    const storeAndroid = `https://play.google.com/store/apps/details?id=org.telegram.messenger`;
+    const storeDesktop = `https://desktop.telegram.org/`;
 
-    const note=document.getElementById("platform-note");
-    if(isIOS) note.textContent="Detected: iOS";
-    else if(isAndroid) note.textContent="Detected: Android";
-    else note.textContent="Detected: Desktop";
-    goal("auto_detect_os");
+    const urlParams = new URLSearchParams(location.search);
+    const preservedEntries = Array.from(urlParams.entries()).filter(([key]) => {
+      const lower = key.toLowerCase();
+      return lower.startsWith('utm_') || ['s','src','ref','gclid','fbclid','ttclid','yclid'].includes(lower);
+    });
+
+    function withUTM(targetUrl) {
+      if (!preservedEntries.length) return targetUrl;
+      try {
+        const parsed = new URL(targetUrl);
+        preservedEntries.forEach(([key, value]) => {
+          if (value) parsed.searchParams.set(key, value);
+        });
+        return parsed.toString();
+      } catch (_) {
+        try {
+          const hashIndex = targetUrl.indexOf('#');
+          const hash = hashIndex >= 0 ? targetUrl.slice(hashIndex) : '';
+          const base = hashIndex >= 0 ? targetUrl.slice(0, hashIndex) : targetUrl;
+          const questionIndex = base.indexOf('?');
+          const query = questionIndex >= 0 ? base.slice(questionIndex + 1) : '';
+          const prefix = questionIndex >= 0 ? base.slice(0, questionIndex) : base;
+          const params = new URLSearchParams(query);
+          preservedEntries.forEach(([key, value]) => {
+            if (value) params.set(key, value);
+          });
+          const nextQuery = params.toString();
+          return prefix + (nextQuery ? `?${nextQuery}` : '') + hash;
+        } catch (_) {
+          return targetUrl;
+        }
+      }
+    }
+
+    const tgOverride = urlParams.get('tg');
+    const fallbackOverride = urlParams.get('fallback');
+    const TG_DEEPLINK = withUTM(tgOverride || TG_DEEPLINK_DEFAULT);
+    const TG_WEB_FALLBACK = withUTM(fallbackOverride || TG_WEB_FALLBACK_DEFAULT);
+
+    try {
+      const qs = new URLSearchParams(location.search);
+      const url = new URL(location.href);
+      let changed = false;
+      ["utm_source","utm_medium","utm_campaign","utm_content"].forEach(k=>{
+        if(qs.get(k)) {
+          if (url.searchParams.get(k) !== qs.get(k)) {
+            url.searchParams.set(k, qs.get(k));
+            changed = true;
+          }
+        }
+      });
+      if (changed) history.replaceState(null, "", url.toString());
+    } catch(_) {}
+
+    const elOpen  = document.getElementById('btn-open-app');
+    const elWeb   = document.getElementById('btn-open-web');
+    const elStore = document.getElementById('btn-download');
+    const elCopy  = document.getElementById('btn-copy');
+    const toast   = document.getElementById('toast');
+
+    function goal(name){ try{ ym(YA_COUNTER_ID,'reachGoal',name); } catch(_){} }
+
+    function sendMetrikaHit() {
+      try {
+        ym(YA_COUNTER_ID, 'hit', location.href);
+        ym(YA_COUNTER_ID, 'reachGoal', 'tg_redirect_open');
+      } catch (_) {}
+    }
+
+    function showToast(msg){
+      if (!toast) return;
+      toast.textContent=msg;
+      toast.classList.add('show');
+      setTimeout(()=>toast.classList.remove('show'),1600);
+    }
+
+    function openTelegramChain() {
+      sendMetrikaHit();
+      setTimeout(() => {
+        window.location.href = TG_DEEPLINK;
+      }, 350);
+      setTimeout(() => {
+        window.location.href = TG_WEB_FALLBACK;
+      }, 1500);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      openTelegramChain();
+    });
+
+    elOpen.addEventListener('click', (e)=>{
+      e.preventDefault();
+      goal('open_app');
+      openTelegramChain();
+    });
+
+    elWeb.addEventListener('click', (e)=>{
+      e.preventDefault();
+      goal('open_web');
+      window.location.href = TG_WEB_FALLBACK;
+    });
+
+    elStore.addEventListener('click', (e)=>{
+      e.preventDefault();
+      let target = storeDesktop;
+      if (isIOS) target = storeIOS;
+      else if (isAndroid) target = storeAndroid;
+      window.location.href = withUTM(target);
+      goal('open_store');
+    });
+
+    elCopy.addEventListener('click', async (e)=>{
+      e.preventDefault();
+      try {
+        await navigator.clipboard.writeText(TG_WEB_FALLBACK);
+        showToast('Link copied');
+        goal('copy_link');
+      } catch (_) {
+        alert('Copy the link:\n' + TG_WEB_FALLBACK);
+      }
+    });
   </script>
 
   <!-- Yandex.Metrika -->
   <script type="text/javascript">
-    (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-      m[i].l=1*new Date();k=e.createElement(t),a=e.getElementsByTagName(t)[0];
-      k.async=1;k.src=r;a.parentNode.insertBefore(k,a)})(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+    (function(m,e,t,r,i,k,a){
+      m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+      m[i].l=1*new Date();
+      k=e.createElement(t),a=e.getElementsByTagName(t)[0];
+      k.async=1;k.src=r;a.parentNode.insertBefore(k,a)
+    })(window, document, "script", `https://mc.yandex.ru/metrika/tag.js?id=${YA_COUNTER_ID}`, "ym");
 
-    ym({{YA_COUNTER_ID}},"init",{clickmap:true, trackLinks:true, accurateTrackBounce:true});
+    ym(YA_COUNTER_ID,"init",{clickmap:true, trackLinks:true, accurateTrackBounce:true});
   </script>
-  <noscript><div><img src="https://mc.yandex.ru/watch/{{YA_COUNTER_ID}}" style="position:absolute; left:-9999px;" alt=""/></div></noscript>
+  <noscript><div><img src="https://mc.yandex.ru/watch/104141664" style="position:absolute; left:-9999px;" alt=""/></div></noscript>
 </body>
 </html>
