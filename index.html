@@ -79,6 +79,52 @@
     const storeDesktop = `https://telegram.org/apps`;
 
     const urlParams = new URLSearchParams(location.search);
+
+    function applyReferrerAutodetect(params) {
+      let utmSource = params.get('utm_source');
+      let utmMedium = params.get('utm_medium');
+
+      if (utmSource) return params;
+
+      const ref = document.referrer || '';
+      if (!ref) return params;
+
+      let host = '';
+      let path = '';
+      try {
+        const refUrl = new URL(ref);
+        host = (refUrl.hostname || '').toLowerCase();
+        path = (refUrl.pathname || '').toLowerCase();
+      } catch (_) {
+        host = ref.toLowerCase();
+      }
+
+      const setSource = (source, mediumIfEmpty) => {
+        if (!utmSource) {
+          params.set('utm_source', source);
+          utmSource = source;
+        }
+        if (!utmMedium && mediumIfEmpty) {
+          params.set('utm_medium', mediumIfEmpty);
+          utmMedium = mediumIfEmpty;
+        }
+      };
+
+      if (host.includes('tiktok.com')) {
+        setSource('tiktok', 'video');
+      } else if (host.includes('instagram.com')) {
+        setSource('instagram', 'reels');
+      } else if (host.includes('youtube.com') || host.includes('youtu.be')) {
+        const isShort = path.includes('/shorts');
+        setSource('youtube', isShort ? 'shorts' : 'video');
+      } else if (host === 't.me' || host.endsWith('.t.me') || host.includes('telegram.org')) {
+        setSource('telegram', 'social');
+      }
+
+      return params;
+    }
+
+    applyReferrerAutodetect(urlParams);
     const preservedEntries = Array.from(urlParams.entries()).filter(([key]) => {
       const lower = key.toLowerCase();
       return lower.startsWith('utm_') || ['s','src','ref','gclid','fbclid','ttclid','yclid'].includes(lower);
