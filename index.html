@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="referrer" content="origin-when-cross-origin" />
   <title>Открываем Telegram…</title>
   <meta name="robots" content="noindex,nofollow" />
 
@@ -21,22 +22,31 @@
     .note { margin-top:14px; font-size:13px; color:#93a0af }
   </style>
 
+  <script>
+    // Настройки редиректа
+    // 1) Deep-link для открытия приложения Telegram
+    const TG_DEEPLINK_DEFAULT = "tg://join?invite=oQf2XIfajeg5MDVi";
+
+    // 2) Web-fallback (если приложение не открылось)
+    const TG_WEB_FALLBACK_DEFAULT = "https://t.me/+oQf2XIfajeg5MDVi";
+
+    // 3) ID счётчика Яндекс.Метрики
+    const YA_COUNTER_ID = 104141664;
+  </script>
+
   <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
-    const YA_COUNTER_ID = {{YA_COUNTER_ID}};
-    window.YA_COUNTER_ID = YA_COUNTER_ID;
-
     (function(m,e,t,r,i,k,a){
         m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
         m[i].l=1*new Date();
         for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
         k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
-    })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id={{YA_COUNTER_ID}}', 'ym');
+    })(window, document,'script',`https://mc.yandex.ru/metrika/tag.js?id=${YA_COUNTER_ID}`, 'ym');
 
     ym(YA_COUNTER_ID, 'init', {ssr:true, clickmap:true, ecommerce:"dataLayer", accurateTrackBounce:true, trackLinks:true});
     ym(YA_COUNTER_ID, 'reachGoal', 'visit');
 </script>
-<noscript><div><img src="https://mc.yandex.ru/watch/{{YA_COUNTER_ID}}" style="position:absolute; left:-9999px;" alt=""/></div></noscript>
+<noscript><div><img src="https://mc.yandex.ru/watch/104141664" style="position:absolute; left:-9999px;" alt=""/></div></noscript>
 </head>
 <body>
   <div class="card">
@@ -54,10 +64,6 @@
   </div>
 
   <script>
-    const inviteCode = "+oQf2XIfajeg5MDVi";
-    const publicUsername = null;
-    const counterId = window.YA_COUNTER_ID;
-
     const UA = (navigator.userAgent || '') + ' ' + (navigator.vendor || '');
     const isAndroid = /android/i.test(UA);
     const isIOS = /iPhone|iPad|iPod/i.test(UA) || ((/Mac|Macintosh/i.test(UA)) && (navigator.maxTouchPoints||0) > 1);
@@ -68,20 +74,48 @@
       if (hint) hint.style.display = 'block';
     }
 
-    const tmeBase = publicUsername ? `https://t.me/${publicUsername}` : `https://t.me/${inviteCode}`;
-    const tgDeep  = publicUsername ? `tg://resolve?domain=${publicUsername}` : `tg://join?invite=${inviteCode.replace('+','')}`;
-    const webTg   = publicUsername ? `https://web.telegram.org/k/#@${publicUsername}` : tmeBase;
     const storeIOS = `https://apps.apple.com/app/telegram-messenger/id686449807`;
     const storeAndroid = `https://play.google.com/store/apps/details?id=org.telegram.messenger`;
     const storeDesktop = `https://telegram.org/apps`;
 
-    function withUTM(url){
-      const qs = new URLSearchParams(location.search);
-      const keep = ["utm_source","utm_medium","utm_campaign","utm_content","utm_term","s","src","ref","gclid","fbclid","ttclid","yclid"];
-      const u = new URL(url);
-      keep.forEach(k=>{ const v = qs.get(k); if(v) u.searchParams.set(k,v); });
-      return u.toString();
+    const urlParams = new URLSearchParams(location.search);
+    const preservedEntries = Array.from(urlParams.entries()).filter(([key]) => {
+      const lower = key.toLowerCase();
+      return lower.startsWith('utm_') || ['s','src','ref','gclid','fbclid','ttclid','yclid'].includes(lower);
+    });
+
+    function withUTM(targetUrl) {
+      if (!preservedEntries.length) return targetUrl;
+      try {
+        const parsed = new URL(targetUrl);
+        preservedEntries.forEach(([key, value]) => {
+          if (value) parsed.searchParams.set(key, value);
+        });
+        return parsed.toString();
+      } catch (_) {
+        try {
+          const hashIndex = targetUrl.indexOf('#');
+          const hash = hashIndex >= 0 ? targetUrl.slice(hashIndex) : '';
+          const base = hashIndex >= 0 ? targetUrl.slice(0, hashIndex) : targetUrl;
+          const questionIndex = base.indexOf('?');
+          const query = questionIndex >= 0 ? base.slice(questionIndex + 1) : '';
+          const prefix = questionIndex >= 0 ? base.slice(0, questionIndex) : base;
+          const params = new URLSearchParams(query);
+          preservedEntries.forEach(([key, value]) => {
+            if (value) params.set(key, value);
+          });
+          const nextQuery = params.toString();
+          return prefix + (nextQuery ? `?${nextQuery}` : '') + hash;
+        } catch (_) {
+          return targetUrl;
+        }
+      }
     }
+
+    const tgOverride = urlParams.get('tg');
+    const fallbackOverride = urlParams.get('fallback');
+    const TG_DEEPLINK = withUTM(tgOverride || TG_DEEPLINK_DEFAULT);
+    const TG_WEB_FALLBACK = withUTM(fallbackOverride || TG_WEB_FALLBACK_DEFAULT);
 
     // --- NEW: inject UTM into page URL for Yandex Metrika standard reports ---
     try {
@@ -104,40 +138,64 @@
     const elStore = document.getElementById('storeBtn');
     const elCopy  = document.getElementById('copyBtn');
 
-    elWeb.href = withUTM(webTg);
+    elWeb.href = TG_WEB_FALLBACK;
+
+    function goal(name) {
+      try { ym(YA_COUNTER_ID, 'reachGoal', name); } catch (_) {}
+    }
+
+    function sendMetrikaHit() {
+      try {
+        ym(YA_COUNTER_ID, 'hit', location.href);
+        ym(YA_COUNTER_ID, 'reachGoal', 'tg_redirect_open');
+      } catch (_) {}
+    }
+
+    function openTelegramChain() {
+      sendMetrikaHit();
+      setTimeout(() => {
+        window.location.href = TG_DEEPLINK;
+      }, 350);
+      setTimeout(() => {
+        window.location.href = TG_WEB_FALLBACK;
+      }, 1500);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      openTelegramChain();
+    });
 
     elStore.addEventListener('click', (e)=>{
       e.preventDefault();
       let target = storeDesktop;
       if (isIOS) target = storeIOS;
       else if (isAndroid) target = storeAndroid;
-      location.href = withUTM(target);
-      try { ym(counterId, 'reachGoal', 'open_store'); } catch(_) {}
+      window.location.href = withUTM(target);
+      goal('open_store');
     });
 
     elCopy.addEventListener('click', async (e)=>{
       e.preventDefault();
-      try { await navigator.clipboard.writeText(withUTM(tmeBase)); elCopy.textContent = 'Ссылка скопирована'; ym(counterId, 'reachGoal', 'copy_link'); } catch(_){ alert('Скопируйте ссылку:\n' + withUTM(tmeBase)); }
+      try {
+        await navigator.clipboard.writeText(TG_WEB_FALLBACK);
+        elCopy.textContent = 'Ссылка скопирована';
+        goal('copy_link');
+      } catch(_){
+        alert('Скопируйте ссылку:\n' + TG_WEB_FALLBACK);
+      }
     });
 
-    function tryOpenApp(){
-      if(isIOS){
-        location.href = withUTM(tmeBase);
-        setTimeout(()=>{ location.href = withUTM(storeIOS); }, 1800);
-      } else if(isAndroid){
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        iframe.src = tgDeep;
-        document.body.appendChild(iframe);
-        setTimeout(()=>{ location.href = withUTM(tmeBase); }, 800);
-        setTimeout(()=>{ location.href = withUTM(storeAndroid); }, 1800);
-      } else {
-        location.href = withUTM(tmeBase);
-      }
-      try { ym(counterId, 'reachGoal', 'open_app'); } catch(_) {}
-    }
+    elWeb.addEventListener('click', (e) => {
+      e.preventDefault();
+      goal('open_web');
+      window.location.href = TG_WEB_FALLBACK;
+    });
 
-    elOpen.addEventListener('click', (e)=>{ e.preventDefault(); tryOpenApp(); });
+    elOpen.addEventListener('click', (e)=>{
+      e.preventDefault();
+      goal('open_app');
+      openTelegramChain();
+    });
 
     [elOpen, elWeb, elStore, elCopy].forEach(a=>a.setAttribute('target','_top'));
   </script>
