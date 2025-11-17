@@ -83,7 +83,9 @@
     function applyReferrerAutodetect(params) {
       let utmSource = params.get('utm_source');
       let utmMedium = params.get('utm_medium');
+      let utmCampaign = params.get('utm_campaign');
 
+      // если utm_source уже есть — ничего не трогаем
       if (utmSource) return params;
 
       const ref = document.referrer || '';
@@ -99,7 +101,7 @@
         host = ref.toLowerCase();
       }
 
-      const setSource = (source, mediumIfEmpty) => {
+      const setSource = (source, mediumIfEmpty, campaignIfEmpty) => {
         if (!utmSource) {
           params.set('utm_source', source);
           utmSource = source;
@@ -108,17 +110,43 @@
           params.set('utm_medium', mediumIfEmpty);
           utmMedium = mediumIfEmpty;
         }
+        if (!utmCampaign && campaignIfEmpty) {
+          params.set('utm_campaign', campaignIfEmpty);
+          utmCampaign = campaignIfEmpty;
+        }
       };
 
+      // ===== ТВОИ КОНКРЕТНЫЕ ПРОФИЛИ =====
+
+      // YouTube канал UCaBCi551wyLbdD6IRyXsGJQ
+      if (host.includes('youtube.com') && path.includes('/channel/ucabci551wylbdd6iryxsgjq')) {
+        setSource('youtube', 'yt_kiwinapa_channel', 'profile');
+        return params;
+      }
+
+      // TikTok @podgrifom
+      if (host.includes('tiktok.com') && path.startsWith('/@podgrifom')) {
+        setSource('tiktok', 'tt_podgrifom_profile', 'profile');
+        return params;
+      }
+
+      // Instagram @kiwinapa
+      if (host.includes('instagram.com') && path.startsWith('/kiwinapa')) {
+        setSource('instagram', 'ig_kiwinapa_profile', 'profile');
+        return params;
+      }
+
+      // ===== ОБЩИЙ АВТодетект по платформам =====
+
       if (host.includes('tiktok.com')) {
-        setSource('tiktok', 'video');
+        setSource('tiktok', 'video', null);
       } else if (host.includes('instagram.com')) {
-        setSource('instagram', 'reels');
+        setSource('instagram', 'reels', null);
       } else if (host.includes('youtube.com') || host.includes('youtu.be')) {
         const isShort = path.includes('/shorts');
-        setSource('youtube', isShort ? 'shorts' : 'video');
+        setSource('youtube', isShort ? 'shorts' : 'video', null);
       } else if (host === 't.me' || host.endsWith('.t.me') || host.includes('telegram.org')) {
-        setSource('telegram', 'social');
+        setSource('telegram', 'social', null);
       }
 
       return params;
